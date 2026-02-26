@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Croquis Dashboard — Retours de Commande</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0f0f13;
+    --surface: #17171e;
+    --surface2: #1e1e28;
+    --border: #2a2a38;
+    --accent: #4f8ef7;
+    --accent2: #f7804f;
+    --accent3: #4ff7b0;
+    --accent4: #f74f7e;
+    --text: #e8e8f0;
+    --muted: #6b6b88;
+    --sketch: #3a3a52;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Syne', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px;
+  }
+
+  /* ---- HEADER ---- */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 36px;
+  }
+  .page-title {
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .page-title span { color: var(--accent); }
+  .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+  }
+
+  /* ---- DASHBOARD FRAME ---- */
+  .dashboard {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+    position: relative;
+  }
+
+  /* ---- TOP BAR ---- */
+  .topbar {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .topbar-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .topbar-title span { color: var(--accent); }
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filter-pill {
+    background: var(--sketch);
+    border: 1px dashed var(--muted);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .filter-pill::before { content: '▼'; font-size: 7px; color: var(--accent); }
+
+  /* ---- KPI ROW ---- */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .kpi-card {
+    padding: 20px 24px;
+    border-right: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card:last-child { border-right: none; }
+  .kpi-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 0;
+  }
+  .kpi-card:nth-child(1)::after { background: var(--accent); }
+  .kpi-card:nth-child(2)::after { background: var(--accent2); }
+  .kpi-card:nth-child(3)::after { background: var(--accent3); }
+  .kpi-card:nth-child(4)::after { background: var(--accent4); }
+
+  .kpi-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .kpi-card:nth-child(1) .kpi-value { color: var(--accent); }
+  .kpi-card:nth-child(2) .kpi-value { color: var(--accent2); }
+  .kpi-card:nth-child(3) .kpi-value { color: var(--accent3); }
+  .kpi-card:nth-child(4) .kpi-value { color: var(--accent4); }
+  .kpi-sub {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+  .kpi-icon {
+    position: absolute;
+    top: 16px; right: 20px;
+    font-size: 22px;
+    opacity: 0.15;
+  }
+
+  /* ---- MAIN ZONE ---- */
+  .main-zone {
+    display: grid;
+    grid-template-columns: 1fr 1.8fr 1fr;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    min-height: 220px;
+  }
+  .zone-panel {
+    padding: 18px 20px;
+    border-right: 1px solid var(--border);
+  }
+  .zone-panel:last-child { border-right: none; }
+
+  .panel-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-label::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Bar chart sketch */
+  .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .bar-label-text {
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    width: 110px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bar-track {
+    flex: 1;
+    height: 16px;
+    background: var(--sketch);
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent) 0%, rgba(79,142,247,0.4) 100%);
+    position: relative;
+  }
+  .bar-fill::after {
+    content: attr(data-val);
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 8px;
+    font-family: 'DM Mono', monospace;
+    color: rgba(255,255,255,0.8);
+  }
+
+  /* Line chart sketch */
+  .chart-area {
+    width: 100%;
+    height: 160px;
+    position: relative;
+  }
+  .chart-area svg { width: 100%; height: 100%; }
+
+  /* Map sketch */
+  .map-sketch {
+    width: 100%;
+    height: 160px;
+    position: relative;
+  }
+  .map-sketch svg { width: 100%; height: 100%; }
+
+  /* ---- BOTTOM ZONE ---- */
+  .bottom-zone {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    min-height: 180px;
+  }
+
+  /* Treemap sketch */
+  .treemap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 3px;
+    height: 140px;
+  }
+  .tm-cell {
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    color: rgba(255,255,255,0.7);
+    font-weight: 500;
+    text-align: center;
+    padding: 4px;
+  }
+  .tm-cell:nth-child(1) { background: rgba(79,142,247,0.35); grid-column: 1; grid-row: 1 / span 2; }
+  .tm-cell:nth-child(2) { background: rgba(247,128,79,0.35); }
+  .tm-cell:nth-child(3) { background: rgba(79,247,176,0.25); }
+  .tm-cell:nth-child(4) { background: rgba(247,79,126,0.2); grid-column: 2; grid-row: 2; }
+
+  /* Stacked bar sketch */
+  .stacked-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .stacked-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .stacked-label {
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+  }
+  .stacked-bar {
+    height: 20px;
+    display: flex;
+    border-radius: 3px;
+    overflow: hidden;
+    gap: 1px;
+  }
+  .seg { height: 100%; }
+
+  /* Top table sketch */
+  .mini-table { width: 100%; border-collapse: collapse; }
+  .mini-table th {
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    text-align: left;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.08em;
+  }
+  .mini-table td {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    padding: 5px 6px;
+    border-bottom: 1px solid rgba(42,42,56,0.5);
+    color: var(--text);
+  }
+  .mini-table td:last-child { color: var(--accent2); text-align: right; }
+  .rank {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    background: var(--sketch);
+    color: var(--muted);
+    font-size: 8px;
+    text-align: center;
+    line-height: 16px;
+    margin-right: 4px;
+  }
+  .rank-1 { background: rgba(79,142,247,0.3); color: var(--accent); }
+  .rank-2 { background: rgba(247,128,79,0.3); color: var(--accent2); }
+  .rank-3 { background: rgba(79,247,176,0.3); color: var(--accent3); }
+
+  /* ---- LEGEND ---- */
+  .legend-bar {
+    background: var(--surface2);
+    border-top: 1px solid var(--border);
+    padding: 10px 24px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ---- ANNOTATIONS ---- */
+  .annotation {
+    position: absolute;
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    background: rgba(79,142,247,0.08);
+    border: 1px dashed rgba(79,142,247,0.3);
+    border-radius: 4px;
+    padding: 3px 8px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Section bracket labels */
+  .section-tag {
+    writing-mode: vertical-rl;
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    position: absolute;
+    left: -28px;
+    top: 50%;
+    transform: translateY(-50%) rotate(180deg);
+  }
+
+  .outer-wrapper {
+    position: relative;
+    padding-left: 40px;
+  }
+  .outer-label {
+    writing-mode: vertical-rl;
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    position: absolute;
+    left: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Bracket lines */
+  .bracket-wrap {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  .bracket-side {
+    width: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .bracket-line {
+    width: 1px;
+    background: var(--border);
+    flex: 1;
+  }
+  .bracket-text {
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    writing-mode: vertical-rl;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transform: rotate(180deg);
+    white-space: nowrap;
+  }
+
+  /* Note callouts */
+  .note {
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .note-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    flex: 1;
+    min-width: 180px;
+  }
+  .note-num {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--sketch);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-title">Croquis Dashboard — <span>Analyse des Retours de Commande</span></div>
+  <div class="badge">Tableau Desktop · Maquette fil de fer</div>
+</div>
+
+<div style="display: flex; align-items: stretch; gap: 0;">
+
+  <!-- Bracket labels -->
+  <div style="width: 36px; display: flex; flex-direction: column; flex-shrink: 0; margin-right: 8px;">
+    <div style="flex: 0 0 48px;"></div><!-- topbar height -->
+    <div style="flex: 0 0 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;">
+      <div style="width:1px; flex:1; background: var(--border);"></div>
+      <div style="writing-mode: vertical-rl; transform: rotate(180deg); font-size:9px; font-family:'DM Mono',monospace; color:var(--accent); letter-spacing:.12em; text-transform:uppercase; white-space:nowrap; padding: 4px 0;">① KPIs</div>
+      <div style="width:1px; flex:1; background: var(--border);"></div>
+    </div>
+    <div style="flex: 0 0 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;">
+      <div style="width:1px; flex:1; background: var(--border);"></div>
+      <div style="writing-mode: vertical-rl; transform: rotate(180deg); font-size:9px; font-family:'DM Mono',monospace; color:var(--accent2); letter-spacing:.12em; text-transform:uppercase; white-space:nowrap; padding: 4px 0;">② Analyses principales</div>
+      <div style="width:1px; flex:1; background: var(--border);"></div>
+    </div>
+    <div style="flex: 0 0 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;">
+      <div style="width:1px; flex:1; background: var(--border);"></div>
+      <div style="writing-mode: vertical-rl; transform: rotate(180deg); font-size:9px; font-family:'DM Mono',monospace; color:var(--accent3); letter-spacing:.12em; text-transform:uppercase; white-space:nowrap; padding: 4px 0;">③ Analyses secondaires</div>
+      <div style="width:1px; flex:1; background: var(--border);"></div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard" style="flex:1;">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-title">📦 Dashboard <span>Retours de Commande</span></div>
+      <div class="filters">
+        <div class="filter-pill">Période</div>
+        <div class="filter-pill">Catégorie</div>
+        <div class="filter-pill">Région</div>
+        <div class="filter-pill">Motif</div>
+        <div class="filter-pill">Statut</div>
+        <div class="filter-pill">Canal</div>
+      </div>
+      <div style="font-size:10px; font-family:'DM Mono',monospace; color: var(--muted); white-space:nowrap;">
+        ◉ Fév 2024 → Fév 2025
+      </div>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-icon">📦</div>
+        <div class="kpi-label">Retours totaux</div>
+        <div class="kpi-value">2 000</div>
+        <div class="kpi-sub">COUNTD(return_id)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">💶</div>
+        <div class="kpi-label">Montant total (€)</div>
+        <div class="kpi-value">348 K€</div>
+        <div class="kpi-sub">SUM(return_amount)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">⏱</div>
+        <div class="kpi-label">Délai moyen retour</div>
+        <div class="kpi-value">15.4 j</div>
+        <div class="kpi-sub">AVG(return_delay_days)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">📉</div>
+        <div class="kpi-label">Taux de retour</div>
+        <div class="kpi-value">18.2 %</div>
+        <div class="kpi-sub">Retours / Commandes</div>
+      </div>
+    </div>
+
+    <!-- MAIN ZONE -->
+    <div class="main-zone">
+
+      <!-- Barres motifs -->
+      <div class="zone-panel">
+        <div class="panel-label" style="--accent: #4f8ef7;">Motifs de retour</div>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-label-text">Mauvaise taille</div>
+            <div class="bar-track"><div class="bar-fill" style="width:85%" data-val="22%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label-text">Produit défectueux</div>
+            <div class="bar-track"><div class="bar-fill" style="width:72%" data-val="20%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label-text">Ne correspond pas</div>
+            <div class="bar-track"><div class="bar-fill" style="width:65%" data-val="18%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label-text">Changement d'avis</div>
+            <div class="bar-track"><div class="bar-fill" style="width:52%" data-val="15%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label-text">Livraison endommagée</div>
+            <div class="bar-track"><div class="bar-fill" style="width:42%" data-val="12%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label-text">Commande en double</div>
+            <div class="bar-track"><div class="bar-fill" style="width:28%" data-val="8%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label-text">Délai trop long</div>
+            <div class="bar-track"><div class="bar-fill" style="width:16%" data-val="5%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Courbe évolution -->
+      <div class="zone-panel">
+        <div class="panel-label" style="--accent: #f7804f;">Évolution mensuelle des retours</div>
+        <div class="chart-area">
+          <svg viewBox="0 0 400 150" preserveAspectRatio="none">
+            <!-- Grid lines -->
+            <line x1="0" y1="30" x2="400" y2="30" stroke="#2a2a38" stroke-width="1"/>
+            <line x1="0" y1="70" x2="400" y2="70" stroke="#2a2a38" stroke-width="1"/>
+            <line x1="0" y1="110" x2="400" y2="110" stroke="#2a2a38" stroke-width="1"/>
+            <!-- Area fill -->
+            <path d="M0,110 C30,100 60,80 90,85 C120,90 150,60 180,55 C210,50 240,70 270,65 C300,60 330,40 360,45 L360,140 L0,140 Z"
+                  fill="rgba(247,128,79,0.12)" />
+            <!-- Line -->
+            <path d="M0,110 C30,100 60,80 90,85 C120,90 150,60 180,55 C210,50 240,70 270,65 C300,60 330,40 360,45"
+                  fill="none" stroke="#f7804f" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Second line (montant) -->
+            <path d="M0,120 C30,115 60,95 90,100 C120,105 150,75 180,72 C210,69 240,88 270,82 C300,76 330,55 360,62"
+                  fill="none" stroke="#4ff7b0" stroke-width="1.5" stroke-dasharray="4,3" stroke-linecap="round"/>
+            <!-- Dots -->
+            <circle cx="0" cy="110" r="3" fill="#f7804f"/>
+            <circle cx="60" cy="80" r="3" fill="#f7804f"/>
+            <circle cx="120" cy="90" r="3" fill="#f7804f"/>
+            <circle cx="180" cy="55" r="3" fill="#f7804f"/>
+            <circle cx="240" cy="70" r="3" fill="#f7804f"/>
+            <circle cx="300" cy="60" r="3" fill="#f7804f"/>
+            <circle cx="360" cy="45" r="4" fill="#f7804f" stroke="#0f0f13" stroke-width="1.5"/>
+            <!-- Axes labels -->
+            <text x="0" y="148" font-size="9" fill="#6b6b88" font-family="monospace">Mar</text>
+            <text x="55" y="148" font-size="9" fill="#6b6b88" font-family="monospace">Avr</text>
+            <text x="112" y="148" font-size="9" fill="#6b6b88" font-family="monospace">Mai</text>
+            <text x="168" y="148" font-size="9" fill="#6b6b88" font-family="monospace">Jun</text>
+            <text x="224" y="148" font-size="9" fill="#6b6b88" font-family="monospace">Sep</text>
+            <text x="278" y="148" font-size="9" fill="#6b6b88" font-family="monospace">Nov</text>
+            <text x="338" y="148" font-size="9" fill="#6b6b88" font-family="monospace">Fév</text>
+            <!-- Annotation peak -->
+            <rect x="160" y="28" width="60" height="18" rx="3" fill="rgba(247,79,126,0.2)" stroke="rgba(247,79,126,0.5)" stroke-width="1"/>
+            <text x="190" y="40" font-size="8" fill="#f74f7e" font-family="monospace" text-anchor="middle">pic</text>
+            <line x1="185" y1="46" x2="180" y2="55" stroke="#f74f7e" stroke-width="1" stroke-dasharray="2,2"/>
+          </svg>
+        </div>
+        <div style="display:flex; gap:16px; margin-top:6px;">
+          <div class="legend-item"><div class="legend-dot" style="background:#f7804f;"></div>Nb retours</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#4ff7b0;"></div>Montant (€)</div>
+        </div>
+      </div>
+
+      <!-- Carte France -->
+      <div class="zone-panel">
+        <div class="panel-label" style="--accent: #4ff7b0;">Retours par région</div>
+        <div class="map-sketch">
+          <svg viewBox="0 0 200 160" preserveAspectRatio="xMidYMid meet">
+            <!-- France shape simplified -->
+            <path d="M60,10 L90,8 L120,15 L145,30 L155,55 L150,80 L140,100 L130,125 L110,145 L85,150 L60,140 L40,120 L30,95 L25,70 L30,45 L45,25 Z"
+                  fill="#1e1e28" stroke="#3a3a52" stroke-width="1.5"/>
+            <!-- Circles régions -->
+            <circle cx="95" cy="55" r="14" fill="rgba(79,142,247,0.4)" stroke="#4f8ef7" stroke-width="1"/>
+            <text x="95" y="59" font-size="8" fill="#fff" text-anchor="middle" font-family="monospace">IDF</text>
+            <circle cx="115" cy="95" r="9" fill="rgba(247,128,79,0.3)" stroke="#f7804f" stroke-width="1"/>
+            <text x="115" y="99" font-size="6" fill="#fff" text-anchor="middle" font-family="monospace">PACA</text>
+            <circle cx="75" cy="95" r="8" fill="rgba(79,247,176,0.25)" stroke="#4ff7b0" stroke-width="1"/>
+            <text x="75" y="99" font-size="6" fill="#fff" text-anchor="middle" font-family="monospace">NA</text>
+            <circle cx="95" cy="118" r="7" fill="rgba(247,79,126,0.25)" stroke="#f74f7e" stroke-width="1"/>
+            <text x="95" y="122" font-size="6" fill="#fff" text-anchor="middle" font-family="monospace">OCC</text>
+            <circle cx="62" cy="55" r="7" fill="rgba(79,142,247,0.2)" stroke="#4f8ef7" stroke-width="1"/>
+            <text x="62" y="59" font-size="5.5" fill="#fff" text-anchor="middle" font-family="monospace">HDF</text>
+            <circle cx="130" cy="60" r="6" fill="rgba(79,247,176,0.2)" stroke="#4ff7b0" stroke-width="1"/>
+            <text x="130" y="64" font-size="5.5" fill="#fff" text-anchor="middle" font-family="monospace">GE</text>
+            <!-- Legend -->
+            <circle cx="24" cy="132" r="5" fill="rgba(79,142,247,0.4)" stroke="#4f8ef7" stroke-width="1"/>
+            <text x="32" y="136" font-size="7" fill="#6b6b88" font-family="monospace">Fort</text>
+            <circle cx="24" cy="147" r="3" fill="rgba(79,142,247,0.2)" stroke="#4f8ef7" stroke-width="1"/>
+            <text x="32" y="151" font-size="7" fill="#6b6b88" font-family="monospace">Faible</text>
+          </svg>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOTTOM ZONE -->
+    <div class="bottom-zone">
+
+      <!-- Treemap catégories -->
+      <div class="zone-panel">
+        <div class="panel-label" style="--accent: #4ff7b0;">Retours par catégorie</div>
+        <div class="treemap">
+          <div class="tm-cell">Électronique<br/>32%</div>
+          <div class="tm-cell">Vêtements<br/>24%</div>
+          <div class="tm-cell">Sport<br/>21%</div>
+          <div class="tm-cell">Maison<br/>14%</div>
+        </div>
+        <div class="tm-cell" style="background:rgba(247,128,79,0.15); border-radius:4px; margin-top:3px; height: 28px; font-size:9px; font-family:'DM Mono',monospace; color:var(--muted); display:flex; align-items:center; justify-content:center;">Beauté & Santé · 9%</div>
+      </div>
+
+      <!-- Barres empilées canal x statut -->
+      <div class="zone-panel">
+        <div class="panel-label" style="--accent: #f74f7e;">Statut par canal de vente</div>
+        <div class="stacked-bars">
+          <div class="stacked-row">
+            <div class="stacked-label">Site web</div>
+            <div class="stacked-bar">
+              <div class="seg" style="width:55%; background:rgba(79,247,176,0.5);"></div>
+              <div class="seg" style="width:20%; background:rgba(247,128,79,0.5);"></div>
+              <div class="seg" style="width:17%; background:rgba(79,142,247,0.4);"></div>
+              <div class="seg" style="width:8%; background:rgba(247,79,126,0.5);"></div>
+            </div>
+          </div>
+          <div class="stacked-row">
+            <div class="stacked-label">App mobile</div>
+            <div class="stacked-bar">
+              <div class="seg" style="width:50%; background:rgba(79,247,176,0.5);"></div>
+              <div class="seg" style="width:22%; background:rgba(247,128,79,0.5);"></div>
+              <div class="seg" style="width:20%; background:rgba(79,142,247,0.4);"></div>
+              <div class="seg" style="width:8%; background:rgba(247,79,126,0.5);"></div>
+            </div>
+          </div>
+          <div class="stacked-row">
+            <div class="stacked-label">Marketplace</div>
+            <div class="stacked-bar">
+              <div class="seg" style="width:58%; background:rgba(79,247,176,0.5);"></div>
+              <div class="seg" style="width:18%; background:rgba(247,128,79,0.5);"></div>
+              <div class="seg" style="width:15%; background:rgba(79,142,247,0.4);"></div>
+              <div class="seg" style="width:9%; background:rgba(247,79,126,0.5);"></div>
+            </div>
+          </div>
+          <div class="stacked-row">
+            <div class="stacked-label">Téléphone</div>
+            <div class="stacked-bar">
+              <div class="seg" style="width:45%; background:rgba(79,247,176,0.5);"></div>
+              <div class="seg" style="width:25%; background:rgba(247,128,79,0.5);"></div>
+              <div class="seg" style="width:22%; background:rgba(79,142,247,0.4);"></div>
+              <div class="seg" style="width:8%; background:rgba(247,79,126,0.5);"></div>
+            </div>
+          </div>
+        </div>
+        <div class="legend-bar" style="border:none; padding: 10px 0 0 0; background:none; gap:12px;">
+          <div class="legend-item"><div class="legend-dot" style="background:#4ff7b0;"></div>Remboursé</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f7804f;"></div>Échangé</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7;"></div>En cours</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f74f7e;"></div>Refusé</div>
+        </div>
+      </div>
+
+      <!-- Top 10 produits -->
+      <div class="zone-panel">
+        <div class="panel-label" style="--accent: #f7804f;">Top produits retournés</div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Produit</th>
+              <th>Retours</th>
+              <th>Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="rank rank-1">1</span></td><td>Smartphone</td><td>142</td><td>28 400€</td></tr>
+            <tr><td><span class="rank rank-2">2</span></td><td>Veste</td><td>118</td><td>9 440€</td></tr>
+            <tr><td><span class="rank rank-3">3</span></td><td>Tablette</td><td>97</td><td>17 460€</td></tr>
+            <tr><td><span class="rank">4</span></td><td>Chaussures</td><td>89</td><td>7 120€</td></tr>
+            <tr><td><span class="rank">5</span></td><td>Écouteurs</td><td>76</td><td>6 840€</td></tr>
+            <tr><td><span class="rank">6</span></td><td>Pantalon</td><td>71</td><td>4 260€</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Legend bar -->
+    <div class="legend-bar">
+      <div style="font-size:10px; font-family:'DM Mono',monospace; color:var(--muted); margin-right:8px;">Actions Tableau :</div>
+      <div class="legend-item">🖱 Clic sur motif → filtre global</div>
+      <div class="legend-item">🖱 Clic région → filtre géo</div>
+      <div class="legend-item">⚙ Paramètre : Nb retours / Montant €</div>
+      <div style="margin-left:auto; font-size:10px; font-family:'DM Mono',monospace; color:var(--border);">croquis · non contractuel</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Notes -->
+<div class="note" style="margin-top: 20px;">
+  <div class="note-item">
+    <div class="note-num">1</div>
+    <div>Les <b style="color:var(--text)">filtres en haut</b> s'appliquent à toutes les vues via les Actions Tableau (filtres globaux).</div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">2</div>
+    <div>La <b style="color:var(--text)">courbe du milieu</b> affiche deux métriques simultanées : nombre de retours + montant. Paramètre de bascule recommandé.</div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">3</div>
+    <div>Le <b style="color:var(--text)">treemap</b> est interactif : cliquer sur une catégorie filtre les barres de motifs et le tableau produits.</div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">4</div>
+    <div>La <b style="color:var(--text)">taille des bulles</b> sur la carte représente le volume de retours par région (pas les valeurs absolues).</div>
+  </div>
+</div>
+
+</body>
+</html>
